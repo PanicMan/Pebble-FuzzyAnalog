@@ -115,7 +115,7 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 				int16_t nHrPnt = i/6;
 				if (clock_is_24h_style())
 					if ((aktHH > 9 && aktHH < 21 && nHrPnt > 0 && nHrPnt < 6) ||
-						(aktHH > 15 && aktHH < 3 && nHrPnt >= 6  && nHrPnt <= 12))
+						(((aktHH > 15 && aktHH <= 23) || (aktHH >= 0 && aktHH < 3)) && nHrPnt >= 6  && nHrPnt <= 12))
 						nHrPnt += 12;
 				
 				snprintf(hhBuffer, sizeof(hhBuffer), "%d", nHrPnt);

@@ -1,5 +1,5 @@
 {
-    "versionLabel": "1.6",
+    "versionLabel": "1.7",
     "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
     "appKeys": {
         "datefmt": 6,
@@ -12,7 +12,7 @@
         "vibr": 8
     },
     "longName": "Fuzzy Analog",
-    "versionCode": 6,
+    "versionCode": 7,
     "capabilities": [
         "configurable"
     ],
