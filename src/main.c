@@ -1,6 +1,6 @@
 #include <pebble.h>
 	
-#define TIMER_MS 150
+#define TIMER_MS 75
 
 enum ConfigKeys {
 	CONFIG_KEY_THEME=1,
@@ -104,7 +104,7 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 		ptLin.x = (int16_t)(sinC * (int32_t)(radD) / TRIG_MAX_RATIO) + clock_center.x - sub_rect.origin.x;
 		ptLin.y = (int16_t)(-cosC * (int32_t)(radD) / TRIG_MAX_RATIO) + clock_center.y - sub_rect.origin.y;
 
-		if (ptLin.x > -20 && ptLin.x < bounds.size.w+20 && ptLin.y > -20 && ptLin.y < bounds.size.h+20)
+		if (ptLin.x > -40 && ptLin.x < bounds.size.w+40 && ptLin.y > -40 && ptLin.y < bounds.size.h+40)
 		{
 			if ((i % 6) == 0)
 			{
@@ -112,7 +112,13 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 				gpath_rotate_to(hour_path, angleC);
 				gpath_draw_filled(ctx, hour_path);
 				
-				snprintf(hhBuffer, sizeof(hhBuffer), "%d", (int16_t)i/6);
+				int16_t nHrPnt = i/6;
+				if (clock_is_24h_style())
+					if ((aktHH > 9 && aktHH < 21 && nHrPnt > 0 && nHrPnt < 6) ||
+						(aktHH > 15 && aktHH < 3 && nHrPnt >= 6  && nHrPnt <= 12))
+						nHrPnt += 12;
+				
+				snprintf(hhBuffer, sizeof(hhBuffer), "%d", nHrPnt);
 				GSize txtSize = graphics_text_layout_get_content_size(hhBuffer, 
 					fonts_get_system_font(FONT_KEY_DROID_SERIF_28_BOLD), 
 					bounds, GTextOverflowModeWordWrap, GTextAlignmentCenter);
@@ -180,12 +186,16 @@ static void timerCallback(void *data)
 		struct tm *t = localtime(&temp);
 		if ((aktHH % 12) != (t->tm_hour % 12) || aktMM != t->tm_min)
 		{
-			timer = app_timer_register(TIMER_MS, timerCallback, NULL);
-			layer_mark_dirty(face_layer);
-
 			int16_t nStep = (aktHH % 12) != (t->tm_hour % 12) ? 5 : 1;
 			if ((t->tm_hour % 12) < 6)
 			{
+				//Initial Value? Set correct initial
+				if (aktHH == 0 && aktMM == 0)
+				{
+					aktHH = t->tm_hour >= 12 ? 12 : 0;
+					aktMM = 0;
+				}
+
 				if (aktMM < 60-nStep)
 					aktMM += nStep;
 				else
@@ -199,7 +209,7 @@ static void timerCallback(void *data)
 				//Initial Value? Set correct initial
 				if (aktHH == 0 && aktMM == 0)
 				{
-					aktHH = 23;
+					aktHH = t->tm_hour > 12 ? 23 : 11;
 					aktMM = 60;
 				}
 				
@@ -211,6 +221,9 @@ static void timerCallback(void *data)
 					aktHH--;
 				}
 			}
+
+			layer_mark_dirty(face_layer);
+			timer = app_timer_register(TIMER_MS, timerCallback, NULL);
 		}
 		else
 			b_initialized = true;
@@ -424,7 +437,7 @@ static void window_load(Window *window)
 	if (CfgData.anim)
 	{
 		aktHH = aktMM = 0;
-		timerCallback(NULL);
+		timer = app_timer_register(500, timerCallback, NULL);
 	}	
 	else
 		b_initialized = true;
