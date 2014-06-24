@@ -235,6 +235,10 @@ static void timerCallback(void *data)
 					aktMM = 60;
 					aktHH--;
 				}
+				
+				//Little workaround if time is close to the 12 o'clock
+				if ((aktHH % 12) == (t->tm_hour % 12) && aktMM < t->tm_min)
+					aktMM = t->tm_min;
 			}
 
 			layer_mark_dirty(face_layer);
