@@ -153,9 +153,14 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	gpath_move_to(hand_path, ptLin);
 	gpath_rotate_to(hand_path, angle);
 	gpath_draw_filled(ctx, hand_path);
+	graphics_context_set_stroke_color(ctx, CfgData.black ? GColorBlack : GColorWhite);
+	gpath_draw_outline(ctx, hand_path);
 	
 	if (CfgData.sep)
+	{
+		graphics_context_set_stroke_color(ctx, CfgData.black ? GColorWhite : GColorBlack);
 		graphics_draw_line(ctx, GPoint(10, bounds.size.h-1), GPoint(bounds.size.w-10, bounds.size.h-1));
+	}
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
@@ -170,7 +175,17 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	strftime(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
 		CfgData.datefmt == 1 ? "%d-%m-%Y" : 
 		CfgData.datefmt == 2 ? "%d/%m/%Y" : 
-		CfgData.datefmt == 3 ? "%m/%d/%Y" : "%d.%m.%Y", tick_time);
+		CfgData.datefmt == 3 ? "%m/%d/%Y" : 
+		CfgData.datefmt == 4 ? "%Y-%m-%d" : "%d.%m.%Y", tick_time);
+	/*
+	snprintf(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
+		CfgData.datefmt == 1 ? "%d-%d-%d" : 
+		CfgData.datefmt == 2 ? "%d/%d/%d" : 
+		CfgData.datefmt == 3 ? "%d/%d/%d" : 
+		CfgData.datefmt == 4 ? "%d-%d-%d" : "%d.%d.%d", 88, 88, 8888);
+	*/
+	//strcpy(ddmmyyyyBuffer, "00.00.0000");
+	
 	text_layer_set_text(date_layer, ddmmyyyyBuffer);
 	
 	//Hourly vibrate
@@ -377,7 +392,8 @@ void in_received_handler(DictionaryIterator *received, void *ctx)
 			persist_write_int(CONFIG_KEY_DATEFMT, 
 				strcmp(akt_tuple->value->cstring, "fra") == 0 ? 1 : 
 				strcmp(akt_tuple->value->cstring, "eng") == 0 ? 2 : 
-				strcmp(akt_tuple->value->cstring, "usa") == 0 ? 3 : 0);
+				strcmp(akt_tuple->value->cstring, "usa") == 0 ? 3 : 
+				strcmp(akt_tuple->value->cstring, "iso") == 0 ? 4 : 0);
 		
 		if (akt_tuple->key == CONFIG_KEY_SMART)
 			persist_write_bool(CONFIG_KEY_SMART, strcmp(akt_tuple->value->cstring, "yes") == 0);
@@ -405,14 +421,14 @@ static void window_load(Window *window)
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
 	
-	digitS = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_24));
+	digitS = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_23));
 	bmp_mask = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MASK);
 	
 	// Init layers
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.w));
 	layer_set_update_proc(face_layer, face_update_proc);
 
-	date_layer = text_layer_create(GRect(0, bounds.size.w-3, bounds.size.w, bounds.size.h-bounds.size.w+3));
+	date_layer = text_layer_create(GRect(0, bounds.size.w-2, bounds.size.w, bounds.size.h-bounds.size.w+2));
 	text_layer_set_background_color(date_layer, GColorClear);
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);

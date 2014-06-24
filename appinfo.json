@@ -1,50 +1,50 @@
 {
-    "versionLabel": "1.7",
-    "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
+    "versionLabel": "1.8",
     "appKeys": {
-        "datefmt": 6,
-        "anim": 4,
-        "sep": 5,
-        "inv": 3,
         "fsm": 2,
+        "anim": 4,
+        "vibr": 8,
+        "datefmt": 6,
+        "sep": 5,
         "theme": 1,
         "smart": 7,
-        "vibr": 8
+        "inv": 3
     },
-    "longName": "Fuzzy Analog",
     "versionCode": 7,
-    "capabilities": [
-        "configurable"
-    ],
-    "shortName": "Fuzzy Analog",
-    "companyName": "PanicMan",
     "watchapp": {
         "watchface": true
     },
+    "longName": "Fuzzy Analog",
+    "shortName": "Fuzzy Analog",
+    "companyName": "PanicMan",
+    "capabilities": [
+        "configurable"
+    ],
     "resources": {
         "media": [
             {
+                "file": "images/Battery.png",
                 "type": "png",
-                "name": "IMAGE_BATTERY",
-                "file": "images/Battery.png"
+                "name": "IMAGE_BATTERY"
             },
             {
-                "menuIcon": true,
-                "type": "png",
-                "name": "IMAGE_MENU",
-                "file": "images/menuimage.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MASK",
-                "file": "images/roundmask.png"
-            },
-            {
+                "file": "fonts/DIGITALBOLD2.TTF",
                 "characterRegex": "[-/0-9.]",
                 "type": "font",
-                "name": "FONT_DIGITAL_24",
-                "file": "fonts/DIGITALBOLD2.TTF"
+                "name": "FONT_DIGITAL_23"
+            },
+            {
+                "file": "images/roundmask.png",
+                "type": "png",
+                "name": "IMAGE_MASK"
+            },
+            {
+                "file": "images/menuimage.png",
+                "menuIcon": true,
+                "type": "png",
+                "name": "IMAGE_MENU"
             }
         ]
-    }
+    },
+    "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce"
 }
