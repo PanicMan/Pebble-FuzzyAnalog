@@ -351,6 +351,8 @@ static void update_configuration(void)
 	struct tm *t = localtime(&temp);
 
 	//Manually call the tick handler when the window is loading
+	aktHH = t->tm_hour;
+	aktMM = t->tm_min;
 	handle_tick(t, MINUTE_UNIT);
 
 	//Set Battery state

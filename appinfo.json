@@ -1,50 +1,51 @@
 {
-    "versionLabel": "1.8",
     "appKeys": {
-        "fsm": 2,
         "anim": 4,
-        "vibr": 8,
         "datefmt": 6,
+        "fsm": 2,
+        "inv": 3,
         "sep": 5,
-        "theme": 1,
         "smart": 7,
-        "inv": 3
+        "theme": 1,
+        "vibr": 8
     },
-    "versionCode": 7,
-    "watchapp": {
-        "watchface": true
-    },
-    "longName": "Fuzzy Analog",
-    "shortName": "Fuzzy Analog",
-    "companyName": "PanicMan",
     "capabilities": [
         "configurable"
     ],
+    "companyName": "PanicMan",
+    "longName": "Fuzzy Analog",
+    "projectType": "native",
     "resources": {
         "media": [
             {
-                "file": "images/Battery.png",
-                "type": "png",
-                "name": "IMAGE_BATTERY"
+                "file": "images/menuimage.png",
+                "menuIcon": true,
+                "name": "IMAGE_MENU",
+                "type": "png"
             },
             {
-                "file": "fonts/DIGITALBOLD2.TTF",
+                "file": "images/Battery.png",
+                "name": "IMAGE_BATTERY",
+                "type": "png"
+            },
+            {
                 "characterRegex": "[-/0-9.]",
-                "type": "font",
-                "name": "FONT_DIGITAL_23"
+                "file": "fonts/DIGITALBOLD2.TTF",
+                "name": "FONT_DIGITAL_23",
+                "type": "font"
             },
             {
                 "file": "images/roundmask.png",
-                "type": "png",
-                "name": "IMAGE_MASK"
-            },
-            {
-                "file": "images/menuimage.png",
-                "menuIcon": true,
-                "type": "png",
-                "name": "IMAGE_MENU"
+                "name": "IMAGE_MASK",
+                "type": "png"
             }
         ]
     },
-    "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce"
+    "shortName": "Fuzzy Analog",
+    "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
+    "versionCode": 7,
+    "versionLabel": "1.9",
+    "watchapp": {
+        "watchface": true
+    }
 }
