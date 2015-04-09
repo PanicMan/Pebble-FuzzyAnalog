@@ -30,6 +30,7 @@
             },
             {
                 "characterRegex": "[-/0-9.]",
+                "compatibility": "2.7",
                 "file": "fonts/DIGITALBOLD2.TTF",
                 "name": "FONT_DIGITAL_23",
                 "type": "font"
@@ -41,10 +42,11 @@
             }
         ]
     },
+    "sdkVersion": "2",
     "shortName": "Fuzzy Analog",
     "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
     "versionCode": 7,
-    "versionLabel": "1.9",
+    "versionLabel": "1.10",
     "watchapp": {
         "watchface": true
     }

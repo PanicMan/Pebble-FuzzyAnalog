@@ -47,10 +47,16 @@ static const struct GPathInfo SECS_PATH_INFO = {
 
 GPath *hand_path, *hour_path, *mins_path, *secs_path;
 
-static const uint32_t const segments[] = {100, 100, 100};
-static const VibePattern vibe_pat = {
-	.durations = segments,
-	.num_segments = ARRAY_LENGTH(segments),
+static const uint32_t segments_hr[] = {100, 100, 100};
+static const VibePattern vibe_pat_hr = {
+	.durations = segments_hr,
+	.num_segments = ARRAY_LENGTH(segments_hr),
+};
+
+static const uint32_t segments_bt[] = {100, 100, 100, 100, 400, 400, 100, 100, 100};
+static const VibePattern vibe_pat_bt = {
+	.durations = segments_bt,
+	.num_segments = ARRAY_LENGTH(segments_bt),
 };
 
 Window *window;
@@ -190,7 +196,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	
 	//Hourly vibrate
 	if (CfgData.vibr && tick_time->tm_min == 0)
-		vibes_enqueue_custom_pattern(vibe_pat); 	
+		vibes_enqueue_custom_pattern(vibe_pat_hr); 	
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void timerCallback(void *data) 
@@ -264,6 +270,9 @@ void battery_state_service_handler(BatteryChargeState charge_state)
 void bluetooth_connection_handler(bool connected)
 {
 	layer_set_hidden(bitmap_layer_get_layer(radio_layer), connected != true);
+	
+	if (connected != true)
+		vibes_enqueue_custom_pattern(vibe_pat_bt); 	
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void update_configuration(void)
@@ -272,7 +281,7 @@ static void update_configuration(void)
     {
         int32_t theme = persist_read_int(CONFIG_KEY_THEME);
 		CfgData.black = (theme == 1);
-		CfgData.white = (theme == 2);
+		CfgData.white = false;
 	}
 	else
 	{
@@ -320,8 +329,7 @@ static void update_configuration(void)
 	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
-	window_set_background_color(window, CfgData.white ? GColorWhite : GColorBlack);
-	text_layer_set_text_color(date_layer, CfgData.white ? GColorBlack : GColorWhite);
+	window_set_background_color(window, CfgData.black ? GColorBlack : GColorWhite);
 	
 	layer_remove_from_parent(face_layer);
 	layer_destroy(face_layer);
@@ -380,7 +388,7 @@ void in_received_handler(DictionaryIterator *received, void *ctx)
 		if (akt_tuple->key == CONFIG_KEY_THEME)
 			persist_write_int(CONFIG_KEY_THEME, 
 				strcmp(akt_tuple->value->cstring, "black") == 0 ? 1 : 
-				strcmp(akt_tuple->value->cstring, "white") == 0 ? 2 : 0);
+				/*strcmp(akt_tuple->value->cstring, "white") == 0 ? 2 :*/ 0);
 	
 		if (akt_tuple->key == CONFIG_KEY_FSM)
 			persist_write_bool(CONFIG_KEY_FSM, strcmp(akt_tuple->value->cstring, "yes") == 0);
@@ -434,8 +442,9 @@ static void window_load(Window *window)
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.w));
 	layer_set_update_proc(face_layer, face_update_proc);
 
-	date_layer = text_layer_create(GRect(0, bounds.size.w-2, bounds.size.w, bounds.size.h-bounds.size.w+2));
-	text_layer_set_background_color(date_layer, GColorClear);
+	date_layer = text_layer_create(GRect(0, bounds.size.w, bounds.size.w, bounds.size.h-bounds.size.w));
+	text_layer_set_text_color(date_layer, GColorWhite);
+	text_layer_set_background_color(date_layer, GColorBlack);
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);
 
