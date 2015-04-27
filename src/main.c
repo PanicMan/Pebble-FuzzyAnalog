@@ -14,8 +14,7 @@ enum ConfigKeys {
 };
 
 typedef struct {
-	bool black;
-	bool white;
+	bool circle;
 	bool fsm;
 	bool inv;
 	bool anim;
@@ -80,13 +79,13 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	GRect bounds = layer_get_bounds(layer);
 	GPoint /*center = grect_center_point(&bounds),*/ clock_center = GPoint(200, 200);
 	
-	graphics_context_set_stroke_color(ctx, CfgData.black ? GColorWhite : GColorBlack);
-	graphics_context_set_text_color(ctx, CfgData.black ? GColorWhite : GColorBlack);
-	graphics_context_set_fill_color(ctx, CfgData.black ? GColorWhite : GColorBlack);
-	
 	//Draw Mask
-	if (!CfgData.black && !CfgData.white)
+	if (CfgData.circle)
 		graphics_draw_bitmap_in_rect(ctx, bmp_mask, bounds);
+	
+	graphics_context_set_stroke_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
+	graphics_context_set_text_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
+	graphics_context_set_fill_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
 	
 	//TRIG_MAX_ANGLE * t->tm_sec / 60
 	int32_t angle = (TRIG_MAX_ANGLE * (((aktHH % 12) * 60) + (aktMM / 1))) / (12 * 60), 
@@ -156,15 +155,27 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	ptLin.x = (int16_t)(sinl * (int32_t)(radV+111) / TRIG_MAX_RATIO) + clock_center.x - sub_rect.origin.x;
 	ptLin.y = (int16_t)(-cosl * (int32_t)(radV+111) / TRIG_MAX_RATIO) + clock_center.y - sub_rect.origin.y;
 	
+#ifdef PBL_COLOR
+	graphics_context_set_fill_color(ctx, GColorCyan);
+#else
+	graphics_context_set_fill_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
+#endif
+
 	gpath_move_to(hand_path, ptLin);
 	gpath_rotate_to(hand_path, angle);
 	gpath_draw_filled(ctx, hand_path);
-	graphics_context_set_stroke_color(ctx, CfgData.black ? GColorBlack : GColorWhite);
-	gpath_draw_outline(ctx, hand_path);
+
+	//Only if no Mask...
+	if (!CfgData.circle) 
+	{
+		graphics_context_set_stroke_color(ctx, GColorBlack);
+		gpath_draw_outline(ctx, hand_path);
+	}
 	
+	//Draw Separator Line
 	if (CfgData.sep)
 	{
-		graphics_context_set_stroke_color(ctx, CfgData.black ? GColorWhite : GColorBlack);
+		graphics_context_set_stroke_color(ctx, GColorWhite);
 		graphics_draw_line(ctx, GPoint(10, bounds.size.h-1), GPoint(bounds.size.w-10, bounds.size.h-1));
 	}
 }
@@ -182,7 +193,12 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		CfgData.datefmt == 1 ? "%d-%m-%Y" : 
 		CfgData.datefmt == 2 ? "%d/%m/%Y" : 
 		CfgData.datefmt == 3 ? "%m/%d/%Y" : 
-		CfgData.datefmt == 4 ? "%Y-%m-%d" : "%d.%m.%Y", tick_time);
+		CfgData.datefmt == 4 ? "%Y-%m-%d" :  
+		CfgData.datefmt == 5 ? "%d.%m.%y" : 
+		CfgData.datefmt == 6 ? "%d-%m-%y" : 
+		CfgData.datefmt == 7 ? "%d/%m/%y" : 
+		CfgData.datefmt == 8 ? "%m/%d/%y" : 
+		CfgData.datefmt == 9 ? "%y-%m-%d" : "%d.%m.%Y", tick_time);
 	/*
 	snprintf(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
 		CfgData.datefmt == 1 ? "%d-%d-%d" : 
@@ -280,14 +296,10 @@ static void update_configuration(void)
     if (persist_exists(CONFIG_KEY_THEME))
     {
         int32_t theme = persist_read_int(CONFIG_KEY_THEME);
-		CfgData.black = (theme == 1);
-		CfgData.white = false;
+		CfgData.circle = (theme == 0);
 	}
 	else
-	{
-		CfgData.black = false;
-		CfgData.white = false;
-	}
+		CfgData.circle = false;
 	
     if (persist_exists(CONFIG_KEY_FSM))
 		CfgData.fsm = persist_read_bool(CONFIG_KEY_FSM);
@@ -307,11 +319,11 @@ static void update_configuration(void)
     if (persist_exists(CONFIG_KEY_SEP))
 		CfgData.sep = persist_read_bool(CONFIG_KEY_SEP);
 	else	
-		CfgData.sep = false;
+		CfgData.sep = true;
 	
-    if (persist_exists(CONFIG_KEY_DATEFMT))
+    if (persist_exists(CONFIG_KEY_DATEFMT)) 
 		CfgData.datefmt = (int16_t)persist_read_int(CONFIG_KEY_DATEFMT);
-	else	
+	else
 		CfgData.datefmt = 0;
 	
     if (persist_exists(CONFIG_KEY_SMART))
@@ -324,13 +336,12 @@ static void update_configuration(void)
 	else	
 		CfgData.vibr = false;
 	
-	app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "Curr Conf: black:%d, white:%d, fsm:%d, inv:%d, anim:%d, sep:%d, datefmt:%d, smart:%d, vibr:%d",
-		CfgData.black, CfgData.white, CfgData.fsm, CfgData.inv, CfgData.anim, CfgData.sep, CfgData.datefmt, CfgData.smart, CfgData.vibr);
+	app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "Curr Conf: circle:%d, fsm:%d, inv:%d, anim:%d, sep:%d, datefmt:%d, smart:%d, vibr:%d",
+		CfgData.circle, CfgData.fsm, CfgData.inv, CfgData.anim, CfgData.sep, CfgData.datefmt, CfgData.smart, CfgData.vibr);
 	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
-	window_set_background_color(window, CfgData.black ? GColorBlack : GColorWhite);
-	
+
 	layer_remove_from_parent(face_layer);
 	layer_destroy(face_layer);
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, CfgData.fsm ? bounds.size.h : bounds.size.w));
@@ -387,8 +398,7 @@ void in_received_handler(DictionaryIterator *received, void *ctx)
 
 		if (akt_tuple->key == CONFIG_KEY_THEME)
 			persist_write_int(CONFIG_KEY_THEME, 
-				strcmp(akt_tuple->value->cstring, "black") == 0 ? 1 : 
-				/*strcmp(akt_tuple->value->cstring, "white") == 0 ? 2 :*/ 0);
+				strcmp(akt_tuple->value->cstring, "circle") == 0 ? 0 : 1);
 	
 		if (akt_tuple->key == CONFIG_KEY_FSM)
 			persist_write_bool(CONFIG_KEY_FSM, strcmp(akt_tuple->value->cstring, "yes") == 0);
@@ -407,7 +417,12 @@ void in_received_handler(DictionaryIterator *received, void *ctx)
 				strcmp(akt_tuple->value->cstring, "fra") == 0 ? 1 : 
 				strcmp(akt_tuple->value->cstring, "eng") == 0 ? 2 : 
 				strcmp(akt_tuple->value->cstring, "usa") == 0 ? 3 : 
-				strcmp(akt_tuple->value->cstring, "iso") == 0 ? 4 : 0);
+				strcmp(akt_tuple->value->cstring, "iso") == 0 ? 4 :  
+				strcmp(akt_tuple->value->cstring, "gers") == 0 ? 5 : 
+				strcmp(akt_tuple->value->cstring, "fras") == 0 ? 6 : 
+				strcmp(akt_tuple->value->cstring, "engs") == 0 ? 7 : 
+				strcmp(akt_tuple->value->cstring, "usas") == 0 ? 8 : 
+				strcmp(akt_tuple->value->cstring, "isos") == 0 ? 9 : 0);
 		
 		if (akt_tuple->key == CONFIG_KEY_SMART)
 			persist_write_bool(CONFIG_KEY_SMART, strcmp(akt_tuple->value->cstring, "yes") == 0);
@@ -434,6 +449,7 @@ static void window_load(Window *window)
 {
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
+	window_set_background_color(window, GColorBlack);
 	
 	digitS = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_23));
 	bmp_mask = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MASK);

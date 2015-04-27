@@ -18,14 +18,13 @@
     "resources": {
         "media": [
             {
-                "file": "images/menuimage.png",
-                "menuIcon": true,
-                "name": "IMAGE_MENU",
+                "file": "images/Battery_inv~bw.png",
+                "name": "IMAGE_BATTERY_INV",
                 "type": "png"
             },
             {
-                "file": "images/Battery.png",
-                "name": "IMAGE_BATTERY",
+                "file": "images/roundmask.png",
+                "name": "IMAGE_MASK",
                 "type": "png"
             },
             {
@@ -36,17 +35,27 @@
                 "type": "font"
             },
             {
-                "file": "images/roundmask.png",
-                "name": "IMAGE_MASK",
+                "file": "images/Battery.png",
+                "name": "IMAGE_BATTERY",
+                "type": "png"
+            },
+            {
+                "file": "images/menuimage.png",
+                "menuIcon": true,
+                "name": "IMAGE_MENU",
                 "type": "png"
             }
         ]
     },
-    "sdkVersion": "2",
+    "sdkVersion": "3",
     "shortName": "Fuzzy Analog",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
     "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
     "versionCode": 7,
-    "versionLabel": "1.10",
+    "versionLabel": "1.11",
     "watchapp": {
         "watchface": true
     }
