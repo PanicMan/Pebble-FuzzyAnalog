@@ -61,7 +61,6 @@ static const VibePattern vibe_pat_bt = {
 Window *window;
 Layer *face_layer;
 TextLayer* date_layer;
-InverterLayer* inv_layer;
 BitmapLayer *radio_layer, *battery_layer;
 
 static GFont digitS;
@@ -83,9 +82,9 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	if (CfgData.circle)
 		graphics_draw_bitmap_in_rect(ctx, bmp_mask, bounds);
 	
-	graphics_context_set_stroke_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
-	graphics_context_set_text_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
-	graphics_context_set_fill_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
+	graphics_context_set_stroke_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
+	graphics_context_set_text_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
+	graphics_context_set_fill_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
 	
 	//TRIG_MAX_ANGLE * t->tm_sec / 60
 	int32_t angle = (TRIG_MAX_ANGLE * (((aktHH % 12) * 60) + (aktMM / 1))) / (12 * 60), 
@@ -156,9 +155,9 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	ptLin.y = (int16_t)(-cosl * (int32_t)(radV+111) / TRIG_MAX_RATIO) + clock_center.y - sub_rect.origin.y;
 	
 #ifdef PBL_COLOR
-	graphics_context_set_fill_color(ctx, GColorCyan);
+	graphics_context_set_fill_color(ctx, GColorRed);
 #else
-	graphics_context_set_fill_color(ctx, CfgData.circle ? GColorBlack : GColorWhite);
+	graphics_context_set_fill_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
 #endif
 
 	gpath_move_to(hand_path, ptLin);
@@ -168,14 +167,14 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	//Only if no Mask...
 	if (!CfgData.circle) 
 	{
-		graphics_context_set_stroke_color(ctx, GColorBlack);
+		graphics_context_set_stroke_color(ctx, CfgData.inv ? GColorWhite : GColorBlack);
 		gpath_draw_outline(ctx, hand_path);
 	}
 	
 	//Draw Separator Line
-	if (CfgData.sep)
+	if (CfgData.sep && !CfgData.circle)
 	{
-		graphics_context_set_stroke_color(ctx, GColorWhite);
+		graphics_context_set_stroke_color(ctx, CfgData.inv ? GColorBlack : GColorWhite);
 		graphics_draw_line(ctx, GPoint(10, bounds.size.h-1), GPoint(bounds.size.w-10, bounds.size.h-1));
 	}
 }
@@ -307,9 +306,9 @@ static void update_configuration(void)
 		CfgData.fsm = false;
 	
     if (persist_exists(CONFIG_KEY_INV))
-		CfgData.inv = persist_read_bool(CONFIG_KEY_INV);
+		CfgData.inv = !CfgData.circle && persist_read_bool(CONFIG_KEY_INV);
 	else	
-		CfgData.inv = false;
+		CfgData.inv = true;
 	
     if (persist_exists(CONFIG_KEY_ANIM))
 		CfgData.anim = persist_read_bool(CONFIG_KEY_ANIM);
@@ -339,8 +338,12 @@ static void update_configuration(void)
 	app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "Curr Conf: circle:%d, fsm:%d, inv:%d, anim:%d, sep:%d, datefmt:%d, smart:%d, vibr:%d",
 		CfgData.circle, CfgData.fsm, CfgData.inv, CfgData.anim, CfgData.sep, CfgData.datefmt, CfgData.smart, CfgData.vibr);
 	
+	gbitmap_destroy(batteryAll);
+	batteryAll = gbitmap_create_with_resource(CfgData.inv ? RESOURCE_ID_IMAGE_BATTERY_INV : RESOURCE_ID_IMAGE_BATTERY);
+	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
+	window_set_background_color(window, CfgData.inv ? GColorWhite : GColorBlack);
 
 	layer_remove_from_parent(face_layer);
 	layer_destroy(face_layer);
@@ -354,6 +357,9 @@ static void update_configuration(void)
 	if (!CfgData.fsm)
 	{
 		layer_add_child(window_layer, text_layer_get_layer(date_layer));
+		text_layer_set_text_color(date_layer, CfgData.inv ? GColorBlack : GColorWhite);
+		text_layer_set_background_color(date_layer, CfgData.inv ? GColorWhite : GColorBlack);
+
 		if (CfgData.smart)
 		{
 			layer_add_child(window_layer, bitmap_layer_get_layer(radio_layer));
@@ -361,10 +367,6 @@ static void update_configuration(void)
 		}
 	}	
 
-	layer_remove_from_parent(inverter_layer_get_layer(inv_layer));
-	if (CfgData.inv)
-		layer_add_child(window_layer, inverter_layer_get_layer(inv_layer));
-	
 	//Get a time structure so that it doesn't start blank
 	time_t temp = time(NULL);
 	struct tm *t = localtime(&temp);
@@ -449,7 +451,6 @@ static void window_load(Window *window)
 {
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
-	window_set_background_color(window, GColorBlack);
 	
 	digitS = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_23));
 	bmp_mask = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MASK);
@@ -459,8 +460,6 @@ static void window_load(Window *window)
 	layer_set_update_proc(face_layer, face_update_proc);
 
 	date_layer = text_layer_create(GRect(0, bounds.size.w, bounds.size.w, bounds.size.h-bounds.size.w));
-	text_layer_set_text_color(date_layer, GColorWhite);
-	text_layer_set_background_color(date_layer, GColorBlack);
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);
 
@@ -473,9 +472,6 @@ static void window_load(Window *window)
 	radio_layer = bitmap_layer_create(GRect(0, bounds.size.h-21, 10, 20));
 	bitmap_layer_set_background_color(radio_layer, GColorClear);
 	bitmap_layer_set_bitmap(radio_layer, gbitmap_create_as_sub_bitmap(batteryAll, GRect(110, 0, 10, 20)));
-	
-	//Init Inverter Layer
-	inv_layer = inverter_layer_create(bounds);	
 	
 	//Update Configuration
 	update_configuration();
@@ -496,7 +492,6 @@ static void window_unload(Window *window)
 	text_layer_destroy(date_layer);
 	bitmap_layer_destroy(battery_layer);
 	bitmap_layer_destroy(radio_layer);
-	inverter_layer_destroy(inv_layer);
 	fonts_unload_custom_font(digitS);
 	gbitmap_destroy(batteryAll);
 	gbitmap_destroy(bmp_mask);
