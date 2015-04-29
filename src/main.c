@@ -1,7 +1,5 @@
 #include <pebble.h>
 	
-#define TIMER_MS 75
-
 enum ConfigKeys {
 	CONFIG_KEY_THEME=1,
 	CONFIG_KEY_FSM=2,
@@ -11,6 +9,13 @@ enum ConfigKeys {
 	CONFIG_KEY_DATEFMT=6,
 	CONFIG_KEY_SMART=7,
 	CONFIG_KEY_VIBR=8
+};
+
+enum TimerKey {
+	TIMER_ANIM_FACE = 0x0001,
+	TIMER_ANIM_FACE_MS = 75,
+	TIMER_ANIM_BATT = 0x0002,
+	TIMER_ANIM_BATT_MS = 1000
 };
 
 typedef struct {
@@ -67,10 +72,11 @@ static GFont digitS;
 char hhBuffer[] = "00";
 char ddmmyyyyBuffer[] = "00.00.0000";
 static GBitmap *bmp_mask, *batteryAll;
-static int16_t aktHH, aktMM;
-static AppTimer *timer;
-static bool b_initialized;
+static int16_t aktHH, aktMM, aktBatt, aktBattAnim;
+static AppTimer *timer_face, *timer_batt;
+static bool b_initialized, b_charging;
 static CfgDta_t CfgData;
+static PropertyAnimation *s_prop_anim_date, *s_prop_anim_bt, *s_prop_anim_batt;
 
 //-----------------------------------------------------------------------------------------------------------------------
 static void face_update_proc(Layer *layer, GContext *ctx) 
@@ -216,7 +222,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 //-----------------------------------------------------------------------------------------------------------------------
 static void timerCallback(void *data) 
 {
-	if (!b_initialized)
+	if ((int)data == TIMER_ANIM_FACE && !b_initialized)
 	{
 		time_t temp = time(NULL);
 		struct tm *t = localtime(&temp);
@@ -263,20 +269,44 @@ static void timerCallback(void *data)
 			}
 
 			layer_mark_dirty(face_layer);
-			timer = app_timer_register(TIMER_MS, timerCallback, NULL);
+			timer_face = app_timer_register(TIMER_ANIM_FACE_MS, timerCallback, (void*)TIMER_ANIM_FACE);
 		}
 		else
 			b_initialized = true;
+	}
+	else if ((int)data == TIMER_ANIM_BATT && b_charging)
+	{
+		int nImage = 10 - (aktBattAnim / 10);
+		GRect sub_rect = GRect(10*nImage, 0, 10*nImage+10, 20);
+		bitmap_layer_set_bitmap(battery_layer, gbitmap_create_as_sub_bitmap(batteryAll, sub_rect));
+
+		aktBattAnim += 10;
+		if (aktBattAnim > 100)
+			aktBattAnim = aktBatt;
+		timer_batt = app_timer_register(TIMER_ANIM_BATT_MS, timerCallback, (void*)TIMER_ANIM_BATT);
 	}
 }
 //-----------------------------------------------------------------------------------------------------------------------
 void battery_state_service_handler(BatteryChargeState charge_state) 
 {
 	int nImage = 0;
+	aktBatt = charge_state.charge_percent;
+	
 	if (charge_state.is_charging)
-		nImage = 10;
-	else 
-		nImage = 10 - (charge_state.charge_percent / 10);
+	{
+		if (!b_charging)
+		{
+			nImage = 10;
+			b_charging = true;
+			aktBattAnim = aktBatt;
+			timer_batt = app_timer_register(TIMER_ANIM_BATT_MS, timerCallback, (void*)TIMER_ANIM_BATT);
+		}
+	}
+	else
+	{
+		nImage = 10 - (aktBatt / 10);
+		b_charging = false;
+	}
 	
 	GRect sub_rect = GRect(10*nImage, 0, 10*nImage+10, 20);
 	bitmap_layer_set_bitmap(battery_layer, gbitmap_create_as_sub_bitmap(batteryAll, sub_rect));
@@ -340,6 +370,7 @@ static void update_configuration(void)
 	
 	gbitmap_destroy(batteryAll);
 	batteryAll = gbitmap_create_with_resource(CfgData.inv ? RESOURCE_ID_IMAGE_BATTERY_INV : RESOURCE_ID_IMAGE_BATTERY);
+	bitmap_layer_set_bitmap(radio_layer, gbitmap_create_as_sub_bitmap(batteryAll, GRect(110, 0, 10, 20)));
 	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
@@ -459,20 +490,18 @@ static void window_load(Window *window)
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.w));
 	layer_set_update_proc(face_layer, face_update_proc);
 
-	date_layer = text_layer_create(GRect(0, bounds.size.w, bounds.size.w, bounds.size.h-bounds.size.w));
+	date_layer = text_layer_create(GRect(-bounds.size.w, bounds.size.w, bounds.size.w, bounds.size.h-bounds.size.w));
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);
 
+	//Init bluetooth radio
+	radio_layer = bitmap_layer_create(GRect(1, bounds.size.h, 10, 20));
+	bitmap_layer_set_background_color(radio_layer, GColorClear);
+		
 	//Init battery
-	batteryAll = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BATTERY);
-	battery_layer = bitmap_layer_create(GRect(bounds.size.w-11, bounds.size.h-21, 10, 20)); 
+	battery_layer = bitmap_layer_create(GRect(bounds.size.w-11, bounds.size.h, 10, 20)); 
 	bitmap_layer_set_background_color(battery_layer, GColorClear);
 
-	//Init bluetooth radio
-	radio_layer = bitmap_layer_create(GRect(0, bounds.size.h-21, 10, 20));
-	bitmap_layer_set_background_color(radio_layer, GColorClear);
-	bitmap_layer_set_bitmap(radio_layer, gbitmap_create_as_sub_bitmap(batteryAll, GRect(110, 0, 10, 20)));
-	
 	//Update Configuration
 	update_configuration();
 	
@@ -480,10 +509,57 @@ static void window_load(Window *window)
 	if (CfgData.anim)
 	{
 		aktHH = aktMM = 0;
-		timer = app_timer_register(500, timerCallback, NULL);
+		timer_face = app_timer_register(500, timerCallback, (void*)TIMER_ANIM_FACE);
+		
+		//Animate Date
+		GRect rc_from = layer_get_frame(text_layer_get_layer(date_layer));
+		GRect rc_to = rc_from;
+		rc_to.origin.x = 0;
+
+		s_prop_anim_date = property_animation_create_layer_frame(text_layer_get_layer(date_layer), &rc_from, &rc_to);
+		animation_set_curve((Animation*)s_prop_anim_date, AnimationCurveEaseOut);
+		animation_set_delay((Animation*)s_prop_anim_date, 500);
+		animation_set_duration((Animation*)s_prop_anim_date, 1000);
+		animation_schedule((Animation*)s_prop_anim_date);
+		
+		//Animate Bluetooth
+		rc_from = layer_get_frame(bitmap_layer_get_layer(radio_layer));
+		rc_to = rc_from;
+		rc_to.origin.y -= 21;
+
+		s_prop_anim_bt = property_animation_create_layer_frame(bitmap_layer_get_layer(radio_layer), &rc_from, &rc_to);
+		animation_set_curve((Animation*)s_prop_anim_bt, AnimationCurveEaseOut);
+		animation_set_delay((Animation*)s_prop_anim_bt, 1500);
+		animation_set_duration((Animation*)s_prop_anim_bt, 1000);
+		animation_schedule((Animation*)s_prop_anim_bt);
+		
+		//Animate Battery
+		rc_from = layer_get_frame(bitmap_layer_get_layer(battery_layer));
+		rc_to = rc_from;
+		rc_to.origin.y -= 21;
+
+		s_prop_anim_batt = property_animation_create_layer_frame(bitmap_layer_get_layer(battery_layer), &rc_from, &rc_to);
+		animation_set_curve((Animation*)s_prop_anim_batt, AnimationCurveEaseOut);
+		animation_set_delay((Animation*)s_prop_anim_batt, 2000);
+		animation_set_duration((Animation*)s_prop_anim_batt, 1000);
+		animation_schedule((Animation*)s_prop_anim_batt);
 	}	
 	else
+	{	
+		GRect rc = layer_get_frame(text_layer_get_layer(date_layer));
+		rc.origin.x = 0;
+		layer_set_frame(text_layer_get_layer(date_layer), rc);
+		
+		rc = layer_get_frame(bitmap_layer_get_layer(radio_layer));
+		rc.origin.y -= 21;
+		layer_set_frame(bitmap_layer_get_layer(radio_layer), rc);
+		
+		rc = layer_get_frame(bitmap_layer_get_layer(battery_layer));
+		rc.origin.y -= 21;
+		layer_set_frame(bitmap_layer_get_layer(battery_layer), rc);
+		
 		b_initialized = true;
+	}
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void window_unload(Window *window) 
@@ -495,13 +571,17 @@ static void window_unload(Window *window)
 	fonts_unload_custom_font(digitS);
 	gbitmap_destroy(batteryAll);
 	gbitmap_destroy(bmp_mask);
+	
 	if (!b_initialized)
-		app_timer_cancel(timer);
+		app_timer_cancel(timer_face);
+	if (b_charging)
+		app_timer_cancel(timer_batt);
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void init(void) 
 {
 	b_initialized = false;
+	b_charging = false;
 
 	window = window_create();
 	window_set_window_handlers(window, (WindowHandlers) {
@@ -533,6 +613,8 @@ static void init(void)
 //-----------------------------------------------------------------------------------------------------------------------
 static void deinit(void) 
 {
+	animation_unschedule_all();
+	
 	app_message_deregister_callbacks();
 	tick_timer_service_unsubscribe();
 	battery_state_service_unsubscribe();
