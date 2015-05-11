@@ -32,6 +32,7 @@
                 "compatibility": "2.7",
                 "file": "fonts/DIGITALBOLD2.TTF",
                 "name": "FONT_DIGITAL_23",
+                "trackingAdjust": -1,
                 "type": "font"
             },
             {
@@ -55,7 +56,7 @@
     ],
     "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
     "versionCode": 7,
-    "versionLabel": "2.1",
+    "versionLabel": "2.2",
     "watchapp": {
         "watchface": true
     }

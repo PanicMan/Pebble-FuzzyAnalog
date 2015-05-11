@@ -71,7 +71,7 @@ BitmapLayer *radio_layer, *battery_layer;
 static GFont digitS;
 char hhBuffer[] = "00";
 char ddmmyyyyBuffer[] = "00.00.0000";
-static GBitmap *bmp_mask, *batteryAll;
+static GBitmap *bmp_mask, *bmp_batt, *bmp_radio, *batteryAll;
 static int16_t aktHH, aktMM, aktBatt, aktBattAnim;
 static AppTimer *timer_face, *timer_batt;
 static bool b_initialized, b_charging;
@@ -161,7 +161,7 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 	ptLin.y = (int16_t)(-cosl * (int32_t)(radV+111) / TRIG_MAX_RATIO) + clock_center.y - sub_rect.origin.y;
 	
 #ifdef PBL_COLOR
-	graphics_context_set_fill_color(ctx, GColorRed);
+	graphics_context_set_fill_color(ctx, GColorOrange);
 #else
 	graphics_context_set_fill_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
 #endif
@@ -277,8 +277,11 @@ static void timerCallback(void *data)
 	else if ((int)data == TIMER_ANIM_BATT && b_charging)
 	{
 		int nImage = 10 - (aktBattAnim / 10);
-		GRect sub_rect = GRect(10*nImage, 0, 10*nImage+10, 20);
-		bitmap_layer_set_bitmap(battery_layer, gbitmap_create_as_sub_bitmap(batteryAll, sub_rect));
+		
+		bitmap_layer_set_bitmap(battery_layer, NULL);
+		gbitmap_destroy(bmp_batt);
+		bmp_batt = gbitmap_create_as_sub_bitmap(batteryAll, GRect(10*nImage, 0, 10, 20));
+		bitmap_layer_set_bitmap(battery_layer, bmp_batt);
 
 		aktBattAnim += 10;
 		if (aktBattAnim > 100)
@@ -308,8 +311,8 @@ void battery_state_service_handler(BatteryChargeState charge_state)
 		b_charging = false;
 	}
 	
-	GRect sub_rect = GRect(10*nImage, 0, 10*nImage+10, 20);
-	bitmap_layer_set_bitmap(battery_layer, gbitmap_create_as_sub_bitmap(batteryAll, sub_rect));
+	bmp_batt = gbitmap_create_as_sub_bitmap(batteryAll, GRect(10*nImage, 0, 10, 20));
+	bitmap_layer_set_bitmap(battery_layer, bmp_batt);
 }
 //-----------------------------------------------------------------------------------------------------------------------
 void bluetooth_connection_handler(bool connected)
@@ -370,25 +373,28 @@ static void update_configuration(void)
 	
 	gbitmap_destroy(batteryAll);
 	batteryAll = gbitmap_create_with_resource(CfgData.inv ? RESOURCE_ID_IMAGE_BATTERY_INV : RESOURCE_ID_IMAGE_BATTERY);
-	bitmap_layer_set_bitmap(radio_layer, gbitmap_create_as_sub_bitmap(batteryAll, GRect(110, 0, 10, 20)));
+	
+	bitmap_layer_set_bitmap(radio_layer, NULL);
+	gbitmap_destroy(bmp_radio);
+	bmp_radio = gbitmap_create_as_sub_bitmap(batteryAll, GRect(110, 0, 10, 20));
+	bitmap_layer_set_bitmap(radio_layer, bmp_radio);
 	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
 	window_set_background_color(window, CfgData.inv ? GColorWhite : GColorBlack);
-
-	layer_remove_from_parent(face_layer);
-	layer_destroy(face_layer);
-	face_layer = layer_create(GRect(0, 0, bounds.size.w, CfgData.fsm ? bounds.size.h : bounds.size.w));
-	layer_set_update_proc(face_layer, face_update_proc);
-	layer_add_child(window_layer, face_layer);
 	
+	//Bottom Layer first
 	layer_remove_from_parent(text_layer_get_layer(date_layer));
 	layer_remove_from_parent(bitmap_layer_get_layer(radio_layer));
 	layer_remove_from_parent(bitmap_layer_get_layer(battery_layer));
 	if (!CfgData.fsm)
 	{
 		layer_add_child(window_layer, text_layer_get_layer(date_layer));
-		text_layer_set_text_color(date_layer, CfgData.inv ? GColorBlack : GColorWhite);
+		#ifdef PBL_COLOR
+			text_layer_set_text_color(date_layer, CfgData.inv ? GColorDarkGray : GColorLightGray);
+		#else
+			text_layer_set_text_color(date_layer, CfgData.inv ? GColorBlack : GColorWhite);
+		#endif
 		text_layer_set_background_color(date_layer, CfgData.inv ? GColorWhite : GColorBlack);
 
 		if (CfgData.smart)
@@ -397,6 +403,12 @@ static void update_configuration(void)
 			layer_add_child(window_layer, bitmap_layer_get_layer(battery_layer));
 		}
 	}	
+
+	layer_remove_from_parent(face_layer);
+	layer_destroy(face_layer);
+	face_layer = layer_create(GRect(0, 0, bounds.size.w, CfgData.fsm ? bounds.size.h : bounds.size.w));
+	layer_set_update_proc(face_layer, face_update_proc);
+	layer_add_child(window_layer, face_layer);
 
 	//Get a time structure so that it doesn't start blank
 	time_t temp = time(NULL);
@@ -490,7 +502,7 @@ static void window_load(Window *window)
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.w));
 	layer_set_update_proc(face_layer, face_update_proc);
 
-	date_layer = text_layer_create(GRect(-bounds.size.w, bounds.size.w, bounds.size.w, bounds.size.h-bounds.size.w));
+	date_layer = text_layer_create(GRect(-bounds.size.w, bounds.size.w-2, bounds.size.w, bounds.size.h-bounds.size.w));
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);
 
@@ -569,8 +581,10 @@ static void window_unload(Window *window)
 	bitmap_layer_destroy(battery_layer);
 	bitmap_layer_destroy(radio_layer);
 	fonts_unload_custom_font(digitS);
-	gbitmap_destroy(batteryAll);
+	gbitmap_destroy(bmp_batt);
+	gbitmap_destroy(bmp_radio);
 	gbitmap_destroy(bmp_mask);
+	gbitmap_destroy(batteryAll);
 	
 	if (!b_initialized)
 		app_timer_cancel(timer_face);

@@ -17,9 +17,9 @@ Pebble.addEventListener("showConfiguration", function() {
     console.log("read options: " + JSON.stringify(options));
     console.log("showing configuration");
     if (options == null) {
-        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog';
+        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog%20v2.2';
     } else {
-        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog' + 
+        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog%20v2.2' + 
 			'&theme=' + encodeURIComponent(options['theme']) + 
 			'&fsm=' + encodeURIComponent(options['fsm']) + 
 			'&inv=' + encodeURIComponent(options['inv']) + 
