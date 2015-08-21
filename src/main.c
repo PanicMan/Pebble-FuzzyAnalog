@@ -72,7 +72,7 @@ static GFont digitS;
 char hhBuffer[] = "00";
 char ddmmyyyyBuffer[] = "00.00.0000";
 static GBitmap *bmp_mask, *bmp_batt, *bmp_radio, *batteryAll;
-static int16_t aktHH, aktMM, aktBatt, aktBattAnim;
+static int16_t aktHH, aktMM, aktBatt, aktBattAnim, aktBT;
 static AppTimer *timer_face, *timer_batt;
 static bool b_initialized, b_charging;
 static CfgDta_t CfgData;
@@ -319,8 +319,10 @@ void bluetooth_connection_handler(bool connected)
 {
 	layer_set_hidden(bitmap_layer_get_layer(radio_layer), connected != true);
 	
-	if (connected != true)
+	if (!connected && aktBT == 1)
 		vibes_enqueue_custom_pattern(vibe_pat_bt); 	
+	
+	aktBT = connected;
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void update_configuration(void)
@@ -596,6 +598,7 @@ static void init(void)
 {
 	b_initialized = false;
 	b_charging = false;
+	aktBT = -1;
 
 	window = window_create();
 	window_set_window_handlers(window, (WindowHandlers) {

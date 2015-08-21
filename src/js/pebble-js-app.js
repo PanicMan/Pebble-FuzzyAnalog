@@ -16,10 +16,10 @@ Pebble.addEventListener("showConfiguration", function() {
     var options = JSON.parse(window.localStorage.getItem('fuz_ana_opt'));
     console.log("read options: " + JSON.stringify(options));
     console.log("showing configuration");
-    if (options == null) {
-        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog%20v2.2';
-    } else {
-        var uri = 'http://panicman.byto.de/config_fuzana.html?title=Fuzzy%20Analog%20v2.2' + 
+
+	var uri = 'http://panicman.github.io/config_fuzana.html?title=Fuzzy%20Analog%20v2.3';
+    if (options !== null) {
+        uri +=
 			'&theme=' + encodeURIComponent(options['theme']) + 
 			'&fsm=' + encodeURIComponent(options['fsm']) + 
 			'&inv=' + encodeURIComponent(options['inv']) + 
