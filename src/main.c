@@ -78,15 +78,23 @@ static bool b_initialized, b_charging;
 static CfgDta_t CfgData;
 static PropertyAnimation *s_prop_anim_date, *s_prop_anim_bt, *s_prop_anim_batt;
 
+#if defined(PBL_RECT)
+static uint8_t n_bottom_margin = 24;
+#elif defined(PBL_ROUND)
+static uint8_t n_bottom_margin = 26;
+#endif
+
 //-----------------------------------------------------------------------------------------------------------------------
 static void face_update_proc(Layer *layer, GContext *ctx) 
 {
 	GRect bounds = layer_get_bounds(layer);
-	GPoint /*center = grect_center_point(&bounds),*/ clock_center = GPoint(200, 200);
+	GPoint center = grect_center_point(&bounds), clock_center = GPoint(200, 200);
 	
 	//Draw Mask
+#if defined(PBL_RECT)
 	if (CfgData.circle)
 		graphics_draw_bitmap_in_rect(ctx, bmp_mask, bounds);
+#endif		
 	
 	graphics_context_set_stroke_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
 	graphics_context_set_text_color(ctx, CfgData.circle || CfgData.inv ? GColorBlack : GColorWhite);
@@ -177,12 +185,34 @@ static void face_update_proc(Layer *layer, GContext *ctx)
 		gpath_draw_outline(ctx, hand_path);
 	}
 	
-	//Draw Separator Line
+	//Draw Separator Lines
+	graphics_context_set_stroke_color(ctx, CfgData.inv ? GColorBlack : GColorWhite);
+#if defined(PBL_RECT)
 	if (CfgData.sep && !CfgData.circle)
-	{
-		graphics_context_set_stroke_color(ctx, CfgData.inv ? GColorBlack : GColorWhite);
 		graphics_draw_line(ctx, GPoint(10, bounds.size.h-1), GPoint(bounds.size.w-10, bounds.size.h-1));
+#elif defined(PBL_ROUND)
+	//Radio & Battery
+	graphics_context_set_fill_color(ctx, CfgData.inv ? GColorWhite : GColorBlack);
+	if (CfgData.smart)
+	{	
+		graphics_fill_radial(ctx, GRect(-20, center.y-20, 40, 40), GOvalScaleModeFitCircle, 20, DEG_TO_TRIGANGLE(5), DEG_TO_TRIGANGLE(175));
+		graphics_fill_radial(ctx, GRect(bounds.size.w-20, center.y-20, 40, 40), GOvalScaleModeFitCircle, 20, DEG_TO_TRIGANGLE(185), DEG_TO_TRIGANGLE(355));
+		if (CfgData.sep)
+		{
+			graphics_draw_arc(ctx, GRect(-20, center.y-20, 40, 40), GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(5), DEG_TO_TRIGANGLE(175));
+			graphics_draw_arc(ctx, GRect(bounds.size.w-20, center.y-20, 40, 40), GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(190), DEG_TO_TRIGANGLE(350));
+		}
 	}
+
+	//DateTime
+	if (!CfgData.fsm)
+	{
+		graphics_fill_radial(ctx, GRect(center.x-100, bounds.size.h-n_bottom_margin-5, 200, 200), GOvalScaleModeFitCircle, n_bottom_margin+5, DEG_TO_TRIGANGLE(275), DEG_TO_TRIGANGLE(445));
+		graphics_draw_text(ctx, ddmmyyyyBuffer, digitS, GRect(0, bounds.size.h-n_bottom_margin-5, bounds.size.w, n_bottom_margin), GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+		if (CfgData.sep)
+			graphics_draw_arc(ctx, GRect(center.x-100, bounds.size.h-n_bottom_margin-5, 200, 200), GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(275), DEG_TO_TRIGANGLE(445));
+	}
+#endif
 }
 //-----------------------------------------------------------------------------------------------------------------------
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
@@ -194,6 +224,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		layer_mark_dirty(face_layer);
 	}
 	
+#if defined(PBL_RECT)
 	strftime(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
 		CfgData.datefmt == 1 ? "%d-%m-%Y" : 
 		CfgData.datefmt == 2 ? "%d/%m/%Y" : 
@@ -204,6 +235,18 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		CfgData.datefmt == 7 ? "%d/%m/%y" : 
 		CfgData.datefmt == 8 ? "%m/%d/%y" : 
 		CfgData.datefmt == 9 ? "%y-%m-%d" : "%d.%m.%Y", tick_time);
+#elif defined(PBL_ROUND)
+	strftime(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
+		CfgData.datefmt == 1 ? "%d-%m" : 
+		CfgData.datefmt == 2 ? "%d/%m" : 
+		CfgData.datefmt == 3 ? "%m/%d" : 
+		CfgData.datefmt == 4 ? "%m-%d" :  
+		CfgData.datefmt == 5 ? "%d.%m" : 
+		CfgData.datefmt == 6 ? "%d-%m" : 
+		CfgData.datefmt == 7 ? "%d/%m" : 
+		CfgData.datefmt == 8 ? "%m/%d" : 
+		CfgData.datefmt == 9 ? "%m-%d" : "%d.%m", tick_time);
+#endif
 	/*
 	snprintf(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
 		CfgData.datefmt == 1 ? "%d-%d-%d" : 
@@ -211,7 +254,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		CfgData.datefmt == 3 ? "%d/%d/%d" : 
 		CfgData.datefmt == 4 ? "%d-%d-%d" : "%d.%d.%d", 88, 88, 8888);
 	*/
-	//strcpy(ddmmyyyyBuffer, "00.00.0000");
+	//strcpy(ddmmyyyyBuffer, "00000");
 	
 	text_layer_set_text(date_layer, ddmmyyyyBuffer);
 	
@@ -385,12 +428,27 @@ static void update_configuration(void)
 	GRect bounds = layer_get_bounds(window_get_root_layer(window));
 	window_set_background_color(window, CfgData.inv ? GColorWhite : GColorBlack);
 	
-	//Bottom Layer first
+	//Face Layer first on round
+	layer_remove_from_parent(face_layer);
+	layer_destroy(face_layer);
+#if defined(PBL_RECT)
+	face_layer = layer_create(GRect(0, 0, bounds.size.w, CfgData.fsm ? bounds.size.h : bounds.size.h-n_bottom_margin));
+	layer_set_update_proc(face_layer, face_update_proc);
+#elif defined(PBL_ROUND)
+	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
+	layer_set_update_proc(face_layer, face_update_proc);
+	layer_add_child(window_layer, face_layer);
+#endif		
+
+	//Bottom Layer next, then Radio and Battery
 	layer_remove_from_parent(text_layer_get_layer(date_layer));
 	layer_remove_from_parent(bitmap_layer_get_layer(radio_layer));
 	layer_remove_from_parent(bitmap_layer_get_layer(battery_layer));
+#if defined(PBL_RECT)
 	if (!CfgData.fsm)
+#endif		
 	{
+#if defined(PBL_RECT)
 		layer_add_child(window_layer, text_layer_get_layer(date_layer));
 		#ifdef PBL_COLOR
 			text_layer_set_text_color(date_layer, CfgData.inv ? GColorDarkGray : GColorLightGray);
@@ -398,7 +456,7 @@ static void update_configuration(void)
 			text_layer_set_text_color(date_layer, CfgData.inv ? GColorBlack : GColorWhite);
 		#endif
 		text_layer_set_background_color(date_layer, CfgData.inv ? GColorWhite : GColorBlack);
-
+#endif		
 		if (CfgData.smart)
 		{
 			layer_add_child(window_layer, bitmap_layer_get_layer(radio_layer));
@@ -406,11 +464,10 @@ static void update_configuration(void)
 		}
 	}	
 
-	layer_remove_from_parent(face_layer);
-	layer_destroy(face_layer);
-	face_layer = layer_create(GRect(0, 0, bounds.size.w, CfgData.fsm ? bounds.size.h : bounds.size.w));
-	layer_set_update_proc(face_layer, face_update_proc);
+	//On Rect later
+#if defined(PBL_RECT)
 	layer_add_child(window_layer, face_layer);
+#endif		
 
 	//Get a time structure so that it doesn't start blank
 	time_t temp = time(NULL);
@@ -504,7 +561,7 @@ static void window_load(Window *window)
 	face_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.w));
 	layer_set_update_proc(face_layer, face_update_proc);
 
-	date_layer = text_layer_create(GRect(-bounds.size.w, bounds.size.w-2, bounds.size.w, bounds.size.h-bounds.size.w));
+	date_layer = text_layer_create(GRect(-bounds.size.w, bounds.size.h-n_bottom_margin-2, bounds.size.w, n_bottom_margin));
 	text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
 	text_layer_set_font(date_layer, digitS);
 
@@ -538,9 +595,14 @@ static void window_load(Window *window)
 		
 		//Animate Bluetooth
 		rc_from = layer_get_frame(bitmap_layer_get_layer(radio_layer));
+#if defined(PBL_RECT)
 		rc_to = rc_from;
-		rc_to.origin.y -= 21;
-
+		rc_to.origin.y -= rc_from.size.h+1;
+#elif defined(PBL_ROUND)
+		rc_from = GRect(-rc_from.size.w, bounds.size.h/2-rc_from.size.h/2, rc_from.size.w, rc_from.size.h);
+		rc_to = rc_from;
+		rc_to.origin.x = 4;
+#endif		
 		s_prop_anim_bt = property_animation_create_layer_frame(bitmap_layer_get_layer(radio_layer), &rc_from, &rc_to);
 		animation_set_curve((Animation*)s_prop_anim_bt, AnimationCurveEaseOut);
 		animation_set_delay((Animation*)s_prop_anim_bt, 1500);
@@ -549,9 +611,14 @@ static void window_load(Window *window)
 		
 		//Animate Battery
 		rc_from = layer_get_frame(bitmap_layer_get_layer(battery_layer));
+#if defined(PBL_RECT)
 		rc_to = rc_from;
-		rc_to.origin.y -= 21;
-
+		rc_to.origin.y -= rc_from.size.h+1;
+#elif defined(PBL_ROUND)
+		rc_from = GRect(bounds.size.w, bounds.size.h/2-rc_from.size.h/2, rc_from.size.w, rc_from.size.h);
+		rc_to = rc_from;
+		rc_to.origin.x = bounds.size.w-rc_from.size.w-4;
+#endif		
 		s_prop_anim_batt = property_animation_create_layer_frame(bitmap_layer_get_layer(battery_layer), &rc_from, &rc_to);
 		animation_set_curve((Animation*)s_prop_anim_batt, AnimationCurveEaseOut);
 		animation_set_delay((Animation*)s_prop_anim_batt, 2000);
@@ -565,11 +632,19 @@ static void window_load(Window *window)
 		layer_set_frame(text_layer_get_layer(date_layer), rc);
 		
 		rc = layer_get_frame(bitmap_layer_get_layer(radio_layer));
-		rc.origin.y -= 21;
+#if defined(PBL_RECT)
+		rc.origin.y -= rc.size.h+1;
+#elif defined(PBL_ROUND)
+		rc = GRect(4, bounds.size.h/2-rc.size.h/2, rc.size.w, rc.size.h);
+#endif		
 		layer_set_frame(bitmap_layer_get_layer(radio_layer), rc);
 		
 		rc = layer_get_frame(bitmap_layer_get_layer(battery_layer));
-		rc.origin.y -= 21;
+#if defined(PBL_RECT)
+		rc.origin.y -= rc.size.h+1;
+#elif defined(PBL_ROUND)
+		rc = GRect(bounds.size.w-rc.size.w-4, bounds.size.h/2-rc.size.h/2, rc.size.w, rc.size.h);
+#endif		
 		layer_set_frame(bitmap_layer_get_layer(battery_layer), rc);
 		
 		b_initialized = true;
