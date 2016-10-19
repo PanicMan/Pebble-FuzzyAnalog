@@ -226,6 +226,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	
 #if defined(PBL_RECT)
 	strftime(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
+		//true ? "%a %d.%b" :
 		CfgData.datefmt == 1 ? "%d-%m-%Y" : 
 		CfgData.datefmt == 2 ? "%d/%m/%Y" : 
 		CfgData.datefmt == 3 ? "%m/%d/%Y" : 
@@ -234,9 +235,12 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		CfgData.datefmt == 6 ? "%d-%m-%y" : 
 		CfgData.datefmt == 7 ? "%d/%m/%y" : 
 		CfgData.datefmt == 8 ? "%m/%d/%y" : 
-		CfgData.datefmt == 9 ? "%y-%m-%d" : "%d.%m.%Y", tick_time);
+		CfgData.datefmt == 9 ? "%y-%m-%d" : 
+		CfgData.datefmt == 10 ? "%a %d.%m." : 
+		CfgData.datefmt == 11 ? "%a %d.%b" : "%d.%m.%Y", tick_time);
 #elif defined(PBL_ROUND)
 	strftime(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
+		//true ? "%a %d." :
 		CfgData.datefmt == 1 ? "%d-%m" : 
 		CfgData.datefmt == 2 ? "%d/%m" : 
 		CfgData.datefmt == 3 ? "%m/%d" : 
@@ -245,7 +249,9 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 		CfgData.datefmt == 6 ? "%d-%m" : 
 		CfgData.datefmt == 7 ? "%d/%m" : 
 		CfgData.datefmt == 8 ? "%m/%d" : 
-		CfgData.datefmt == 9 ? "%m-%d" : "%d.%m", tick_time);
+		CfgData.datefmt == 9 ? "%m-%d" : 
+		CfgData.datefmt == 10 ? "%a %d." : 
+		CfgData.datefmt == 11 ? "%a %d." : "%d.%m", tick_time);
 #endif
 	/*
 	snprintf(ddmmyyyyBuffer, sizeof(ddmmyyyyBuffer), 
@@ -526,7 +532,9 @@ void in_received_handler(DictionaryIterator *received, void *ctx)
 				strcmp(akt_tuple->value->cstring, "fras") == 0 ? 6 : 
 				strcmp(akt_tuple->value->cstring, "engs") == 0 ? 7 : 
 				strcmp(akt_tuple->value->cstring, "usas") == 0 ? 8 : 
-				strcmp(akt_tuple->value->cstring, "isos") == 0 ? 9 : 0);
+				strcmp(akt_tuple->value->cstring, "isos") == 0 ? 9 : 
+				strcmp(akt_tuple->value->cstring, "cus1") == 0 ? 10 : 
+				strcmp(akt_tuple->value->cstring, "cus2") == 0 ? 11 : 0);
 		
 		if (akt_tuple->key == CONFIG_KEY_SMART)
 			persist_write_bool(CONFIG_KEY_SMART, strcmp(akt_tuple->value->cstring, "yes") == 0);

@@ -1,0 +1,71 @@
+{
+    "author": "PanicMan",
+    "dependencies": {},
+    "keywords": [],
+    "name": "fuzzy-analog",
+    "pebble": {
+        "capabilities": [
+            "location",
+            "configurable"
+        ],
+        "displayName": "Fuzzy Analog",
+        "enableMultiJS": false,
+        "messageKeys": {
+            "anim": 4,
+            "datefmt": 6,
+            "fsm": 2,
+            "inv": 3,
+            "sep": 5,
+            "smart": 7,
+            "theme": 1,
+            "vibr": 8
+        },
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/Battery_inv.png",
+                    "name": "IMAGE_BATTERY_INV",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/menuimage.png",
+                    "menuIcon": true,
+                    "name": "IMAGE_MENU",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/roundmask.png",
+                    "name": "IMAGE_MASK",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/Battery.png",
+                    "name": "IMAGE_BATTERY",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "characterRegex": "[-/0-9a-zA-Z. ]",
+                    "file": "fonts/DIGITALBOLD2.TTF",
+                    "name": "FONT_DIGITAL_23",
+                    "targetPlatforms": null,
+                    "trackingAdjust": -1,
+                    "type": "font"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk"
+        ],
+        "uuid": "761ff40b-4511-494c-addc-5499ff07d2ce",
+        "watchapp": {
+            "watchface": true
+        }
+    },
+    "version": "3.1.0"
+}
