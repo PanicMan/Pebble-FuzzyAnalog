@@ -683,6 +683,17 @@ static void init(void)
 	b_charging = false;
 	aktBT = -1;
 
+	char* sLocale = setlocale(LC_TIME, ""), sLang[3];
+	if (strncmp(sLocale, "en", 2) == 0)
+		strcpy(sLang, "en");
+	else if (strncmp(sLocale, "de", 2) == 0)
+		strcpy(sLang, "de");
+	else if (strncmp(sLocale, "es", 2) == 0)
+		strcpy(sLang, "es");
+	else if (strncmp(sLocale, "fr", 2) == 0)
+		strcpy(sLang, "fr");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Time locale is set to: %s/%s", sLocale, sLang);
+
 	window = window_create();
 	window_set_window_handlers(window, (WindowHandlers) {
 		.load = window_load,
