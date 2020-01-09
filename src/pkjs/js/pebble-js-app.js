@@ -18,7 +18,7 @@ Pebble.addEventListener("showConfiguration", function() {
     console.log("showing configuration");
 
 	var chalk = Pebble.getActiveWatchInfo && Pebble.getActiveWatchInfo().platform === "chalk" ? 'yes' : 'no';
-	var uri = 'http://panicman.github.io/config_fuzana.html?title=Fuzzy%20Analog%20v3.2&chalk='+chalk;
+	var uri = 'http://panicman.github.io/config_fuzana.html?title=Fuzzy%20Analog%20v3.3&chalk='+chalk;
 
 	if (options !== null) {
         uri +=
