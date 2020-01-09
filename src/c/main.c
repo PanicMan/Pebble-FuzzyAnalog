@@ -275,9 +275,10 @@ static void timerCallback(void *data)
 	{
 		time_t temp = time(NULL);
 		struct tm *t = localtime(&temp);
+
 		if ((aktHH % 12) != (t->tm_hour % 12) || aktMM != t->tm_min)
 		{
-			int16_t nStep = (aktHH % 12) != (t->tm_hour % 12) ? 5 : 1;
+			int16_t nStep = (aktHH % 12) != (t->tm_hour % 12) || t->tm_min == 0 ? 5 : 1;
 			if ((t->tm_hour % 12) < 6)
 			{
 				//Initial Value? Set correct initial
@@ -293,6 +294,13 @@ static void timerCallback(void *data)
 				{
 					aktMM = 0;
 					aktHH++;
+				}
+
+				//If we are over the current time, set to current
+				if ((aktHH % 12) * 60 + aktMM >= (t->tm_hour % 12) * 60 + t->tm_min)
+				{
+					aktHH = t->tm_hour;
+					aktMM = t->tm_min;
 				}
 			}
 			else
@@ -315,6 +323,13 @@ static void timerCallback(void *data)
 				//Little workaround if time is close to the 12 o'clock
 				if ((aktHH % 12) == (t->tm_hour % 12) && aktMM < t->tm_min)
 					aktMM = t->tm_min;
+
+				//If we are over the current time, set to current
+				if ((aktHH % 12) * 60 + aktMM <= (t->tm_hour % 12) * 60 + t->tm_min)
+				{
+					aktHH = t->tm_hour;
+					aktMM = t->tm_min;
+				}
 			}
 
 			layer_mark_dirty(face_layer);
